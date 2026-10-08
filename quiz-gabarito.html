@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz Gabarito — Física, Biologia e História</title>
+<style>
+:root{--bg:#0f1220;--card:#181c30;--bd:#2a3050;--tx:#e8eaf6;--mu:#9aa3c7;--ac:#6c7bff;--ok:#2ecc8f;--er:#ff5d6c;--wa:#ffb84d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,Segoe UI,Roboto,sans-serif;line-height:1.5}
+.w{max-width:820px;margin:0 auto;padding:20px}
+h1{font-size:1.6rem;margin:.2em 0}h2{font-size:1.15rem;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:14px 0}
+.mu{color:var(--mu);font-size:.9rem}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:var(--ac);color:#fff;font-weight:600}
+button.sec{background:#262c4a;color:var(--tx)}button:disabled{opacity:.45;cursor:not-allowed}
+input{width:100%;background:#0f1220;border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:9px;font:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:200px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;background:#262c4a;font-size:.8rem;margin-right:6px}
+.opt{display:block;width:100%;text-align:left;background:#12162a;border:1px solid var(--bd);color:var(--tx);margin:8px 0;font-weight:500}
+.opt:hover:not(:disabled){border-color:var(--ac)}.opt.ok{background:#12382c;border-color:var(--ok)}.opt.er{background:#3b1a22;border-color:var(--er)}
+.bar{height:8px;background:#262c4a;border-radius:9px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--ac)}
+.hint{background:#3a2f12;border:1px solid var(--wa);border-radius:10px;padding:10px;margin:10px 0}
+.exp{background:#172044;border-radius:10px;padding:10px;margin-top:10px}
+.t{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:.9rem}.t b{width:210px;font-weight:500}.t .bar{flex:1}
+.streak span{display:inline-block;width:34px;height:34px;border-radius:50%;background:#262c4a;text-align:center;line-height:34px;margin-right:8px;font-weight:700}
+.streak span.on{background:var(--ok);color:#06241a}
+.hide{display:none}.msg{color:var(--wa);font-size:.88rem;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="w">
+<h1>🎯 Quiz Gabarito</h1>
+<div class="mu">Física • Biologia • História — meta: 3 quizzes seguidos com 10/10</div>
+
+<div id="home">
+  <div class="card">
+    <h2>🔑 APIs do Groq (até 3)</h2>
+    <div class="mu" style="margin-bottom:8px">Se uma falhar, acabar o crédito ou não responder, o site passa para a próxima automaticamente. As chaves ficam só no seu navegador.</div>
+    <div class="row"><input id="k0" type="password" placeholder="API 1 (gsk_...)"><input id="k1" type="password" placeholder="API 2 (opcional)"><input id="k2" type="password" placeholder="API 3 (opcional)"></div>
+    <div class="row" style="margin-top:10px"><input id="model" placeholder="Modelo (ex: llama-3.3-70b-versatile)"><button class="sec" id="saveCfg">Salvar</button></div>
+    <div class="msg" id="cfgMsg"></div>
+  </div>
+  <div class="card">
+    <h2>🔥 Sequência de gabaritos</h2>
+    <div class="streak" id="streak"></div>
+    <div class="mu" id="streakInfo" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h2>📊 Seu nível por assunto</h2>
+    <div id="stats"></div>
+  </div>
+  <div class="card">
+    <h2>▶️ Começar</h2>
+    <div class="mu" id="phaseInfo" style="margin-bottom:10px"></div>
+    <div class="row">
+      <button id="bDiag"></button>
+      <button id="bDef" class="sec"></button>
+    </div>
+    <div class="msg" id="homeMsg"></div>
+    <div style="margin-top:12px"><button class="sec" id="reset">Zerar progresso</button></div>
+  </div>
+</div>
+
+<div id="loading" class="card hide"><h2>⏳ Gerando perguntas...</h2><div class="mu" id="loadInfo"></div></div>
+
+<div id="quiz" class="hide">
+  <div class="card">
+    <div class="row" style="align-items:center"><div><span class="pill" id="qMode"></span><span class="pill" id="qApi"></span></div><div style="text-align:right" class="mu">💡 Dicas neste quiz: <b id="hCount">0</b></div></div>
+    <div class="bar" style="margin:12px 0"><i id="prog" style="width:0"></i></div>
+    <div class="mu" id="qNum"></div>
+    <div class="mu" id="qTopic"></div>
+    <h2 id="qText" style="font-size:1.2rem;margin-top:8px"></h2>
+    <div id="opts"></div>
+    <div id="hintBox" class="hint hide"></div>
+    <div id="expBox" class="exp hide"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="sec" id="bHint">💡 Usar dica</button>
+      <button id="bNext" class="hide">Próxima ➜</button>
+    </div>
+  </div>
+</div>
+
+<div id="result" class="hide">
+  <div class="card">
+    <h2 id="rTitle"></h2>
+    <div style="font-size:2rem;font-weight:800" id="rScore"></div>
+    <div class="mu" id="rHints"></div>
+    <div id="rMsg" style="margin:12px 0"></div>
+    <div id="rTopics"></div>
+    <button id="bHome" style="margin-top:12px">Voltar ao início</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ===== CONTEÚDO (do seu mapa mental) =====
+const CONTENT = {
+"Física|Impulso e Teorema do Impulso":"Impulso I = F·Δt; gráfico F×t: impulso = área. Teorema: I = ΔQ; F·Δt = m(vf - vi).",
+"Física|Quantidade de Movimento":"Q = m·v; unidade kg·m/s; conversão: v(m/s) = v(km/h)/3,6. Conservação em sistemas isolados: Q_antes = Q_depois.",
+"Física|Colisões e Restituição":"e = v_afastamento / v_aproximação. Perfeitamente elástica e=1 (conserva energia cinética); parcialmente elástica 0<e<1; perfeitamente inelástica e=0 (corpos ficam grudados).",
+"Física|Energia Cinética e Pêndulo Balístico":"Ec = m·v²/2; energia dissipada = Ec_antes - Ec_depois; pêndulo balístico: velocidade de subida v = raiz(2·g·h).",
+"Física|Hidrostática":"Pressão p = F/A (Pa ou N/m²); densidade ρ = m/V (água = 1000 kg/m³); p_hidrostática = ρ·g·h; Teorema de Stevin: pontos no mesmo nível horizontal têm mesma pressão; pressão absoluta p = p_atm + ρ·g·h.",
+"Biologia|Digestão de Nutrientes":"Carboidratos: início na boca (amilase salivar). Proteínas: início no estômago (meio ácido). Lipídios: intestino delgado (bile emulsifica, lipase digere).",
+"Biologia|Anatomia e Absorção":"Vilosidades aumentam a área de absorção. Fígado produz a bile. Vesícula biliar armazena a bile (não é enzima, é emulsificante).",
+"Biologia|pH e Doença Celíaca":"Estômago: ácido; intestino: básico/alcalino. Doença celíaca: glúten danifica vilosidades, reduzindo absorção.",
+"Biologia|Coração e Caminho do Sangue":"Lado direito recebe sangue pobre em O2 e envia aos pulmões; lado esquerdo recebe sangue rico em O2 e envia ao corpo. Átrio Dir → Ventrículo Dir → Artéria Pulmonar → Pulmões → Veias Pulmonares → Átrio Esq → Ventrículo Esq → Aorta.",
+"Biologia|Vasos e Tipos de Circulação":"Artéria leva sangue para fora do coração; veia traz sangue em direção ao coração. Pulmonar: coração-pulmões-coração; sistêmica: coração-corpo-coração.",
+"Biologia|Pressão Sistólica/Diastólica e Hemoglobina Fetal":"Sistólica: contração do coração; diastólica: relaxamento. Hemoglobina fetal tem maior afinidade por O2 que a materna.",
+"História|Revoluções Inglesas (XVII)":"Revolução Puritana (1640-1660): Cromwell, execução de Carlos I, fim da monarquia e fortalecimento do Parlamento. Revolução Gloriosa (1688): restrição dos poderes absolutistas do rei.",
+"História|Iluminismo e Independência dos EUA":"Iluminismo (XVIII): racionalismo, cientificismo, progresso, esclarecimento; Contrato Social (Locke): normas acordadas para a vida social. Independência dos EUA (1776): direitos naturais (vida e liberdade) ligados a John Locke.",
+"História|Mineração no Brasil Colonial (XVIII)":"Guerra dos Emboabas: paulistas vs forasteiros; Quinto Real: 20% do ouro, Casas de Fundição; transformações: crescimento urbano e mercado interno; tropeirismo: atividade mercantil e transporte.",
+"História|Crise do Açúcar (XVII)":"Concorrência dos holandeses nas Antilhas causou a crise do açúcar brasileiro."
+};
+const TOPICS = Object.keys(CONTENT);
+
+// ===== BANCO OFFLINE (reserva se todas as APIs falharem) =====
+const OFF = [
+["Física|Quantidade de Movimento","Um carro de 1000 kg a 72 km/h tem quantidade de movimento de:",["20 000 kg·m/s","72 000 kg·m/s","10 000 kg·m/s","2 000 kg·m/s"],0,"Converta km/h para m/s dividindo por 3,6.","72/3,6 = 20 m/s; Q = 1000·20 = 20 000 kg·m/s."],
+["Física|Colisões e Restituição","Numa colisão perfeitamente inelástica, o coeficiente de restituição vale:",["0","1","0,5","2"],0,"Os corpos ficam grudados: não há afastamento.","e = v_afastamento / v_aproximação; se grudam, afastamento = 0, logo e = 0."],
+["Física|Impulso e Teorema do Impulso","O impulso é igual:",["à variação da quantidade de movimento","à variação da energia","à força dividida pelo tempo","ao produto m·g"],0,"Teorema do Impulso.","I = F·Δt = ΔQ."],
+["Física|Hidrostática","Dois pontos no mesmo nível horizontal de um líquido em equilíbrio têm:",["mesma pressão","pressões diferentes","mesma densidade apenas","pressão nula"],0,"Teorema de Stevin.","Pelo Teorema de Stevin, mesma altura no mesmo fluido = mesma pressão."],
+["Física|Hidrostática","A pressão absoluta a uma profundidade h é:",["p_atm + ρ·g·h","ρ·g·h","p_atm - ρ·g·h","F·A"],0,"Some a pressão atmosférica.","p = p_atm + ρ·g·h."],
+["Biologia|Digestão de Nutrientes","A digestão do amido começa:",["na boca","no estômago","no intestino grosso","no fígado"],0,"Amilase salivar.","A amilase salivar inicia a digestão de carboidratos na boca."],
+["Biologia|Anatomia e Absorção","A bile é produzida:",["no fígado","na vesícula biliar","no pâncreas","no estômago"],0,"A vesícula só armazena.","O fígado produz; a vesícula armazena. A bile emulsifica gorduras, não é enzima."],
+["Biologia|Coração e Caminho do Sangue","O lado esquerdo do coração recebe sangue:",["rico em O2 vindo dos pulmões","pobre em O2 vindo do corpo","rico em O2 vindo do corpo","misto"],0,"Veias pulmonares.","As veias pulmonares trazem sangue oxigenado ao átrio esquerdo."],
+["Biologia|Vasos e Tipos de Circulação","Artérias são vasos que:",["levam sangue para fora do coração","trazem sangue ao coração","trocam gases com tecidos apenas","armazenam bile"],0,"Artéria = sai.","Artérias saem do coração; veias chegam."],
+["Biologia|pH e Doença Celíaca","Na doença celíaca, o glúten:",["danifica as vilosidades","destrói o estômago","impede a produção de bile","aumenta a absorção"],0,"Pense no intestino delgado.","Danifica vilosidades e reduz a absorção de nutrientes."],
+["História|Revoluções Inglesas (XVII)","A Revolução Gloriosa (1688) resultou em:",["restrição dos poderes absolutistas do rei","execução do rei","fim do Parlamento","república de Cromwell"],0,"Fortalece o Parlamento.","Limitou o poder real e consolidou a monarquia parlamentar."],
+["História|Mineração no Brasil Colonial (XVIII)","O Quinto Real correspondia a:",["20% do ouro extraído","50% do ouro","10% das terras","20% do açúcar"],0,"Quinto = 1/5.","Um quinto (20%) do ouro, cobrado nas Casas de Fundição."],
+["História|Iluminismo e Independência dos EUA","A independência dos EUA (1776) se apoiou nos direitos naturais ligados a:",["John Locke","Cromwell","Carlos I","Luís XIV"],0,"Vida e liberdade.","Locke defendia direitos naturais à vida, liberdade e propriedade."],
+["História|Crise do Açúcar (XVII)","A crise do açúcar no século XVII foi causada por:",["concorrência holandesa nas Antilhas","falta de escravos","guerra dos Emboabas","quinto real"],0,"Holandeses produziram açúcar em outro lugar.","O açúcar antilhano dos holandeses derrubou os preços."]
+];
+
+// ===== ESTADO =====
+const DEF={keys:["","",""],model:"llama-3.3-70b-versatile",stats:{},diag:0,streak:0,best:0,activeKey:0};
+let S=load();
+function load(){try{const r=localStorage.getItem("quizGabarito");if(r)return Object.assign({},DEF,JSON.parse(r))}catch(e){}return JSON.parse(JSON.stringify(DEF))}
+function save(){try{localStorage.setItem("quizGabarito",JSON.stringify(S))}catch(e){}}
+const $=id=>document.getElementById(id);
+const show=id=>["home","loading","quiz","result"].forEach(x=>$(x).classList.toggle("hide",x!==id));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const errRate=t=>{const s=S.stats[t];return s&&s.r+s.w?s.w/(s.r+s.w):null};
+const DIAG_TOTAL=2;
+
+// ===== HOME =====
+function renderHome(){
+  S.keys.forEach((k,i)=>$("k"+i).value=k);$("model").value=S.model;
+  $("streak").innerHTML=[0,1,2].map(i=>`<span class="${i<S.streak?"on":""}">${i<S.streak?"✓":i+1}</span>`).join("");
+  $("streakInfo").textContent=`Sequência atual: ${S.streak}/3 • Recorde: ${S.best}`+(S.streak>=3?" 🏆 META ALCANÇADA!":"");
+  $("stats").innerHTML=TOPICS.map(t=>{const e=errRate(t),n=t.split("|");const s=S.stats[t]||{r:0,w:0};
+    const pct=e===null?0:Math.round((1-e)*100);const col=e===null?"#444":e>.5?"var(--er)":e>.25?"var(--wa)":"var(--ok)";
+    return `<div class="t"><b>${n[0]} · ${n[1]}</b><div class="bar"><i style="width:${pct}%;background:${col}"></i></div><span class="mu" style="width:70px">${e===null?"—":s.r+"/"+(s.r+s.w)}</span></div>`}).join("");
+  const dd=S.diag>=DIAG_TOTAL;
+  $("phaseInfo").textContent=dd?"Diagnóstico concluído. Os quizzes definitivos agora dão mais ênfase ao que você mais erra.":`Faça primeiro os ${DIAG_TOTAL} quizzes de nível (${S.diag}/${DIAG_TOTAL} feitos) para descobrir seus pontos fracos.`;
+  $("bDiag").textContent=dd?"Refazer quiz de nível":`📋 Quiz de nível ${S.diag+1}/${DIAG_TOTAL}`;
+  $("bDef").textContent="🏁 Quiz definitivo";$("bDef").disabled=!dd;
+}
+$("saveCfg").onclick=()=>{S.keys=[0,1,2].map(i=>$("k"+i).value.trim());S.model=$("model").value.trim()||DEF.model;S.activeKey=0;save();$("cfgMsg").textContent="Salvo!";setTimeout(()=>$("cfgMsg").textContent="",2000)};
+$("reset").onclick=()=>{if(confirm("Zerar estatísticas e sequência? (as chaves são mantidas)")){const k=S.keys,m=S.model;S=JSON.parse(JSON.stringify(DEF));S.keys=k;S.model=m;save();renderHome()}};
+$("bDiag").onclick=()=>start("diag");$("bDef").onclick=()=>start("def");
+$("bHome").onclick=()=>{renderHome();show("home")};
+
+// ===== PLANO DE QUESTÕES =====
+function plan(mode){
+  const picks=[];
+  if(mode==="diag"){
+    const bySubj={};TOPICS.forEach(t=>(bySubj[t.split("|")[0]]??=[]).push(t));
+    const pool=shuffle(TOPICS);
+    // garante pelo menos 3 de cada matéria
+    Object.values(bySubj).forEach(l=>shuffle(l).slice(0,3).forEach(t=>{picks.push(t);pool.splice(pool.indexOf(t),1)}));
+    picks.push(...pool.slice(0,10-picks.length));
+  }else{
+    const w=TOPICS.map(t=>{const e=errRate(t);return e===null?1.5:1+5*e});
+    const cnt={};
+    while(picks.length<10){
+      let r=Math.random()*w.reduce((a,b)=>a+b,0),i=0;for(;i<w.length-1&&r>w[i];i++)r-=w[i];
+      const t=TOPICS[i];if((cnt[t]||0)>=3)continue;cnt[t]=(cnt[t]||0)+1;picks.push(t);
+    }
+  }
+  const c={};picks.forEach(t=>c[t]=(c[t]||0)+1);return c;
+}
+
+// ===== API (com troca automática) =====
+async function askGroq(key,prompt){
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),30000);
+  try{
+    const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{method:"POST",signal:ctl.signal,
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+      body:JSON.stringify({model:S.model,temperature:0.7,response_format:{type:"json_object"},
+        messages:[{role:"system",content:"Você é um professor de vestibular. Responda APENAS com JSON válido."},{role:"user",content:prompt}]})});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const d=await r.json();return JSON.parse(d.choices[0].message.content);
+  }finally{clearTimeout(to)}
+}
+function validate(j){
+  const q=(j&&j.questions)||[];
+  const ok=q.filter(x=>x&&x.pergunta&&Array.isArray(x.opcoes)&&x.opcoes.length===4&&Number.isInteger(x.correta)&&x.correta>=0&&x.correta<4&&x.dica&&x.explicacao&&TOPICS.includes(x.topico));
+  if(ok.length<10)throw new Error("JSON incompleto");return ok.slice(0,10);
+}
+async function generate(mode,counts){
+  const keys=S.keys.map((k,i)=>({k,i})).filter(o=>o.k);
+  if(!keys.length)return{qs:offline(counts),api:"Banco offline (sem API)"};
+  const lista=Object.entries(counts).map(([t,n])=>`- topico "${t}" (${n} questão(ões)): ${CONTENT[t]}`).join("\n");
+  const prompt=`Crie EXATAMENTE 10 questões de múltipla escolha (4 opções, 1 correta) em português, nível vestibular/ENEM, baseadas nestes conteúdos e na quantidade indicada por tópico:\n${lista}\n\nAs questões devem ENSINAR: use cálculos, pegadinhas conceituais e aplicações. Não repita enunciados. ${mode==="def"?"Dificulte um pouco: o aluno quer gabaritar.":"Misture níveis fácil, médio e difícil para avaliar o nível do aluno."}\nFormato JSON: {"questions":[{"topico":"<copie exatamente o nome do tópico, ex: Física|Hidrostática>","pergunta":"...","opcoes":["A","B","C","D"],"correta":<índice 0-3>,"dica":"pista que ajuda sem entregar a resposta","explicacao":"explicação didática curta"}]}`;
+  // começa da API ativa e roda em círculo
+  const ord=keys.slice().sort((a,b)=>((a.i-S.activeKey+3)%3)-((b.i-S.activeKey+3)%3));
+  for(const o of ord){
+    $("loadInfo").textContent=`Tentando API ${o.i+1}...`;
+    try{const qs=validate(await askGroq(o.k,prompt));S.activeKey=o.i;save();return{qs,api:`API ${o.i+1}`}}
+    catch(e){console.warn("API "+(o.i+1)+" falhou:",e.message);$("loadInfo").textContent=`API ${o.i+1} falhou (${e.message}). Trocando...`}
+  }
+  return{qs:offline(counts),api:"Banco offline (APIs falharam)"};
+}
+function offline(counts){
+  const want=[];Object.entries(counts).forEach(([t,n])=>{for(let i=0;i<n;i++)want.push(t)});
+  const used=new Set(),out=[];
+  want.forEach(t=>{let c=OFF.map((x,i)=>i).filter(i=>OFF[i][0]===t&&!used.has(i));if(!c.length)c=OFF.map((x,i)=>i).filter(i=>!used.has(i));
+    if(!c.length)return;const i=c[Math.random()*c.length|0];used.add(i);out.push(i)});
+  while(out.length<10){const i=Math.random()*OFF.length|0;if(!out.includes(i)||out.length>=OFF.length*1)out.push(i);if(out.length>=OFF.length&&out.length<10)out.push(i)}
+  return out.slice(0,10).map(i=>{const x=OFF[i];return{topico:x[0],pergunta:x[1],opcoes:x[2],correta:x[3],dica:x[4],explicacao:x[5]}});
+}
+
+// ===== QUIZ =====
+let Q=[],idx=0,mode="",hints=0,hintUsedNow=false,right=0,wrongTopics={},apiName="";
+async function start(m){
+  mode=m;show("loading");$("loadInfo").textContent="Preparando...";
+  const counts=plan(m);const g=await generate(m,counts);apiName=g.api;
+  Q=g.qs.map(q=>{const idxs=shuffle([0,1,2,3]);return{...q,opcoes:idxs.map(i=>q.opcoes[i]),correta:idxs.indexOf(q.correta)}});
+  idx=0;hints=0;right=0;wrongTopics={};
+  $("qMode").textContent=m==="diag"?`Quiz de nível ${Math.min(S.diag+1,DIAG_TOTAL)}`:"Quiz definitivo";$("qApi").textContent=apiName;
+  show("quiz");showQ();
+}
+function showQ(){
+  const q=Q[idx];hintUsedNow=false;$("hCount").textContent=hints;
+  $("qNum").textContent=`Questão ${idx+1} de 10`;$("prog").style.width=(idx/10*100)+"%";
+  $("qTopic").textContent=q.topico.replace("|"," · ");$("qText").textContent=q.pergunta;
+  $("hintBox").classList.add("hide");$("expBox").classList.add("hide");$("bNext").classList.add("hide");$("bHint").disabled=false;
+  $("opts").innerHTML="";
+  q.opcoes.forEach((o,i)=>{const b=document.createElement("button");b.className="opt";b.textContent=String.fromCharCode(65+i)+") "+o;b.onclick=()=>answer(i);$("opts").appendChild(b)});
+}
+$("bHint").onclick=()=>{if(hintUsedNow)return;hintUsedNow=true;hints++;$("hCount").textContent=hints;$("hintBox").textContent="💡 "+Q[idx].dica;$("hintBox").classList.remove("hide");$("bHint").disabled=true};
+function answer(i){
+  const q=Q[idx],bs=[...$("opts").children];bs.forEach(b=>b.disabled=true);
+  bs[q.correta].classList.add("ok");const t=q.topico;S.stats[t]??={r:0,w:0};
+  if(i===q.correta){right++;S.stats[t].r++}else{bs[i].classList.add("er");S.stats[t].w++;wrongTopics[t]=(wrongTopics[t]||0)+1}
+  save();$("bHint").disabled=true;
+  $("expBox").innerHTML=(i===q.correta?"✅ <b>Correto!</b> ":"❌ <b>Errou.</b> ")+q.explicacao;$("expBox").classList.remove("hide");
+  $("bNext").textContent=idx===9?"Ver resultado ➜":"Próxima ➜";$("bNext").classList.remove("hide");
+}
+$("bNext").onclick=()=>{idx++;idx>=10?finish():showQ()};
+function finish(){
+  let msg="";
+  if(mode==="diag"){S.diag=Math.min(S.diag+1,DIAG_TOTAL);msg=S.diag>=DIAG_TOTAL?"Diagnóstico concluído! Seus pontos fracos já aparecem no painel e terão mais ênfase nos quizzes definitivos.":"Falta mais um quiz de nível para completar o diagnóstico.";}
+  else if(right===10){S.streak++;S.best=Math.max(S.best,S.streak);msg=S.streak>=3?"🏆 GABARITOU 3 SEGUIDOS! META CUMPRIDA!":`🔥 Gabaritou! Sequência: ${S.streak}/3.`;if(hints)msg+=` (Você usou ${hints} dica(s) — tente gabaritar sem dicas!)`}
+  else{S.streak=0;msg="Não foi dessa vez: a sequência voltou a 0. Revise os assuntos abaixo e tente de novo!"}
+  save();
+  $("rTitle").textContent=mode==="diag"?"📋 Resultado do quiz de nível":"🏁 Resultado do quiz definitivo";
+  $("rScore").textContent=`${right}/10`;$("rHints").textContent=`💡 Dicas usadas: ${hints}`;$("rMsg").textContent=msg;
+  const w=Object.entries(wrongTopics).sort((a,b)=>b[1]-a[1]);
+  $("rTopics").innerHTML=w.length?"<h2>Onde você errou</h2>"+w.map(([t,n])=>`<div class="t"><b>${t.replace("|"," · ")}</b><span>${n} erro(s)</span></div>`).join(""):"<div>Nenhum erro! 🎉</div>";
+  show("result");
+}
+renderHome();show("home");
+</script>
+</body>
+</html>
